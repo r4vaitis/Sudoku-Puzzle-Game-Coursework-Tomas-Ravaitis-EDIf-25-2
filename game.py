@@ -62,6 +62,7 @@ class SudokuGame:
 
         board = SudokuBoard(grid)
         self.solver.solve(board)
+        self.solution_grid = board.get_grid()
         grid = board.get_grid()
 
         cells = []
@@ -123,31 +124,32 @@ class SudokuGame:
     def make_move(self, row, column, number):
         move = Move(row, column, number)
 
-        if self.board.is_valid_move(move):
-            self.board.set_cell(row, column, number)
-            self.message = "Move accepted."
-
-            if self.board.is_complete():
-                self.message = "Sudoku completed."
-        else:
+        if not self.board.is_valid_move(move):
             self.message = "Wrong move."
+            return
+
+        if number != self.solution_grid[row][column]:
+            self.message = "Wrong number."
+            return
+
+        self.board.set_cell(row, column, number)
+        self.message = "Move accepted."
+
+        if self.board.is_complete():
+            self.message = "Sudoku completed."
 
     def solve(self):
-        if self.solver.solve(self.board):
-            self.file_manager.write_board("solved_puzzle.txt", self.board)
-            self.message = "Sudoku solved and saved."
-        else:
-            self.message = "Sudoku cannot be solved."
+        for row in range(9):
+            for column in range(9):
+                value = self.solution_grid[row][column]
+                self.board.set_cell(row, column, value)
+
+        self.file_manager.write_board("solved_puzzle.txt", self.board)
+        self.message = "Sudoku solved and saved."
 
     def hint(self):
         if self.hints_left <= 0:
             self.message = "No hints left."
-            return
-
-        board_copy = self.board.make_copy()
-
-        if not self.solver.solve(board_copy):
-            self.message = "No hint available."
             return
 
         empty = []
@@ -162,7 +164,7 @@ class SudokuGame:
             return
 
         row, column = random.choice(empty)
-        value = board_copy.get_cell(row, column)
+        value = self.solution_grid[row][column]
 
         self.board.set_cell(row, column, value)
         self.hints_left -= 1
